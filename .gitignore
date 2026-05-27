@@ -1,0 +1,29 @@
+# ============================================================
+# Proteção contra upload acidental de dados sensíveis
+# ============================================================
+
+# Versões originais do fluxo com dados reais da organização
+flow_original.json
+*_original.json
+*_production.json
+*_prod.json
+*_real.json
+
+# Arquivos de backup locais
+*.bak
+*.backup
+
+# Arquivos de ambiente e segredos
+.env
+.env.*
+secrets.json
+config.local.json
+
+# Pastas de sistema
+.DS_Store
+Thumbs.db
+
+# Temporários de editores
+*.tmp
+*.swp
+*~

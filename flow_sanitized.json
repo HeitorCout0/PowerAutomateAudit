@@ -1,0 +1,983 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_powerbi": {
+        "id": "/providers/Microsoft.PowerApps/apis/shared_powerbi",
+        "connectionReferenceLogicalName": "YOUR_USER_sharedpowerbi_XXXXX",
+        "connectionName": "shared-powerbi-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+        "source": "Embedded"
+      },
+      "shared_visualstudioteamservices": {
+        "id": "/providers/Microsoft.PowerApps/apis/shared_visualstudioteamservices",
+        "connectionReferenceLogicalName": "YOUR_USER_sharedvisualstudioteamservices_XXXXX",
+        "connectionName": "shared-visualstudiot-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+        "source": "Embedded"
+      },
+      "shared_sharepointonline": {
+        "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+        "connectionReferenceLogicalName": "YOUR_USER_sharedsharepointonline_XXXXX",
+        "connectionName": "shared-sharepointonl-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX",
+        "source": "Embedded"
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        },
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        }
+      },
+      "staticResults": {
+        "Executar_uma_consulta_em_um_conjuntos_de_dados_-_Mes0": {
+          "status": "Succeeded",
+          "outputs": {
+            "statusCode": "OK",
+            "body": {
+              "body": {
+                "firstTableRows": [
+                  {
+                    "Row - 0": {}
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "triggers": {
+        "Recorrencia": {
+          "type": "Recurrence",
+          "recurrence": {
+            "interval": 1,
+            "frequency": "Month",
+            "timeZone": "YOUR_TIMEZONE",
+            "startTime": "YYYY-MM-DDTHH:MM:SS.000Z"
+          }
+        }
+      },
+      "actions": {
+        "Initialize_variable_-_Total_de_itens": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varTotalDeItens",
+                "type": "integer"
+              }
+            ]
+          },
+          "runAfter": {
+            "Inicializar_variavel_-_varAuditCardId": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Condition_-_Verifica_se_totais_estao_iguais_BPG_x_VSTS": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@outputs('Compose_-_Tamanho_da_Querie')",
+                  "@outputs('Executar_uma_consulta_em_um_conjuntos_de_dados_-_Mes')?['body/firstTableRows']"
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Terminate_-_Itens_iguais": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Succeeded"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "VSTS": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_variable_-_Itens_Faltando_BPG": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varItensFaltandoBPG",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_variable_-_Total_de_itens": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_variable_-_Itens_Faltando_VSTS": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varItensFaltandoVSTS",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_variable_-_Itens_Faltando_BPG": [
+              "Succeeded"
+            ]
+          }
+        },
+        "BPG": {
+          "type": "Scope",
+          "actions": {
+            "Executar_uma_consulta_em_um_conjuntos_de_dados_-_Mes": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "groupid": "YOUR_POWERBI_WORKSPACE_GROUP_ID",
+                  "datasetid": "YOUR_POWERBI_DATASET_ID",
+                  "specification/query": "DEFINE\n\tVAR __DS0FilterTable = \n\t\tTREATAS(\n\t\t\t{\"'measure'[YOUR_THROUGHPUT_MEASURE]\"},\n\t\t\t'YOUR_THROUGHPUT_TABLE'[YOUR_THROUGHPUT_FIELD]\n\t\t)\n\n\tVAR __DS0FilterTable2 = \n\t\tTREATAS({TRUE}, 'dim_result_center_process'[set_process])\n\n\tVAR __DS0FilterTable3 = \n\t\tTREATAS(\n\t\t\t{(\"YOUR_ECOSYSTEM\", \"YOUR_BUSINESS_UNIT\")},\n\t\t\t'dim_result_center_process'[ecosystem],\n\t\t\t'dim_result_center_process'[business_unit_name]\n\t\t)\n\n\tVAR __DS0FilterTable4 = \n\t\tTREATAS(\n\t\t\t{(@{outputs('Compor_Ano')}, \"@{outputs('Compor_-_Trimestre')}\", \"@{outputs('Compor_-_Mes_portugues')}\")},\n\t\t\t'YOUR_DATE_TABLE_ID'[Ano],\n\t\t\t'YOUR_DATE_TABLE_ID'[Trimestre],\n\t\t\t'YOUR_DATE_TABLE_ID'[Mes]\n\t\t)\n\n\tVAR __DS0Core = \n\t\tSUMMARIZECOLUMNS(\n\t\t\tROLLUPADDISSUBTOTAL(\n\t\t\t\tROLLUPGROUP(\n\t\t\t\t\t'fact_workitem'[code_source],\n\t\t\t\t\t'fact_workitem'[code_target],\n\t\t\t\t\t'fact_workitem'[status],\n\t\t\t\t\t'fact_workitem'[closed_date],\n\t\t\t\t\t'fact_workitem'[created_date],\n\t\t\t\t\t'fact_workitem'[target_date],\n\t\t\t\t\t'fact_workitem'[title],\n\t\t\t\t\t'fact_workitem'[user_account]\n\t\t\t\t), \"IsGrandTotalRowTotal\"\n\t\t\t),\n\t\t\t__DS0FilterTable,\n\t\t\t__DS0FilterTable2,\n\t\t\t__DS0FilterTable3,\n\t\t\t__DS0FilterTable4,\n\t\t\t\"m_total_deliveries\", 'measure'[m_total_deliveries]\n\t\t)\n\n\t// --- Adicionando coluna de ID separando pelo \":\" ---\n\tVAR __DS0CoreWithID = \n\t\tADDCOLUMNS(\n\t\t\t__DS0Core,\n\t\t\t\"ID\", \n\t\t\tVAR _source = 'fact_workitem'[code_source]\n\t\t\tVAR _colonPos = FIND(\":\", _source, 1, 0)\n\t\t\tRETURN\n\t\t\t\tIF(_colonPos > 0, MID(_source, _colonPos + 1, LEN(_source)), BLANK())\n\t\t)\n\t// --------------------------------------------------\n\n\tVAR __DS0PrimaryWindowed = \n\t\tTOPN(\n\t\t\t502,\n\t\t\t__DS0CoreWithID,\n\t\t\t[IsGrandTotalRowTotal],\n\t\t\t0,[m_total_deliveries],\n\t\t\t0,\n\t\t\t'fact_workitem'[code_source],\n\t\t\t1,\n\t\t\t'fact_workitem'[code_target],\n\t\t\t1,\n\t\t\t'fact_workitem'[status],\n\t\t\t1,\n\t\t\t'fact_workitem'[closed_date],\n\t\t\t1,\n\t\t\t'fact_workitem'[created_date],\n\t\t\t1,\n\t\t\t'fact_workitem'[target_date],\n\t\t\t1,\n\t\t\t'fact_workitem'[title],\n\t\t\t1,\n\t\t\t'fact_workitem'[user_account],\n\t\t\t1\n\t\t)\n\nEVALUATE\n\t__DS0PrimaryWindowed\n\nORDER BY\n\t[IsGrandTotalRowTotal] DESC,[m_total_deliveries] DESC,\n\t'fact_workitem'[code_source],\n\t'fact_workitem'[code_target],\n\t'fact_workitem'[status],\n\t'fact_workitem'[closed_date],\n\t'fact_workitem'[created_date],\n\t'fact_workitem'[target_date],\n\t'fact_workitem'[title],\n\t'fact_workitem'[user_account]",
+                  "specification/serializerSettings/includeNulls": true
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_powerbi",
+                  "operationId": "ExecuteDatasetQuery",
+                  "connectionName": "shared_powerbi"
+                }
+              }
+            },
+            "Select_IDs_BPG": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Filter_array_-_somente_itens_com_ID')",
+                "select": "@string(int(item()?['[ID]']))"
+              },
+              "runAfter": {
+                "Filter_array_-_somente_itens_com_ID": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Filter_array_-_somente_itens_com_ID": {
+              "type": "Query",
+              "inputs": {
+                "from": "@outputs('Executar_uma_consulta_em_um_conjuntos_de_dados_-_Mes')?['body/firstTableRows']",
+                "where": "@equals(item()?['[IsGrandTotalRowTotal]'], false)"
+              },
+              "runAfter": {
+                "Executar_uma_consulta_em_um_conjuntos_de_dados_-_Mes": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Compor_1": {
+              "type": "Compose",
+              "inputs": "@length(body('Select_IDs_BPG'))",
+              "runAfter": {
+                "Select_IDs_BPG": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Escopo_-_calculo_de_mes_dinamico": [
+              "Succeeded"
+            ]
+          }
+        },
+        "VSTS": {
+          "type": "Scope",
+          "actions": {
+            "Enviar_uma_solicitacao_HTTP_ao_Azure_DevOps": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "account": "YOUR_DEVOPS_ORG",
+                  "parameters/Method": "POST",
+                  "parameters/Uri": "https://dev.azure.com/YOUR_DEVOPS_ORG/YOUR_SOURCE_PROJECT/_apis/wit/wiql?api-version=7.1",
+                  "parameters/Body": "{\"query\": \"SELECT [System.Id],[System.WorkItemType],[System.Title],[System.AssignedTo],[System.State],[Custom.YOUR_OTD_FIELD],[Microsoft.VSTS.Scheduling.TargetDate],[Microsoft.VSTS.Common.ClosedDate] FROM workitems WHERE [System.TeamProject] = 'YOUR_SOURCE_PROJECT' AND [System.WorkItemType] = 'User Story' AND [System.State] <> 'Removed' AND [Custom.YOUR_DELIVERY_FLAG] = 'SIM' AND [Microsoft.VSTS.Common.ClosedDate] >= @startOfMonth - 1 AND [Microsoft.VSTS.Common.ClosedDate] < @startOfMonth AND [Custom.YOUR_PROJECT_FIELD] IN ('YOUR_PROJECT_1','YOUR_PROJECT_2','YOUR_PROJECT_3') AND NOT [System.AreaPath] IN ('YOUR_SOURCE_PROJECT\\\\YOUR_EXCLUDED_AREA_1','YOUR_SOURCE_PROJECT\\\\YOUR_EXCLUDED_AREA_2') ORDER BY [System.Id]\"}"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_visualstudioteamservices",
+                  "operationId": "HttpRequest",
+                  "connectionName": "shared_visualstudioteamservices"
+                }
+              }
+            },
+            "Select_IDs_VSTS": {
+              "type": "Select",
+              "inputs": {
+                "from": "@body('Enviar_uma_solicitacao_HTTP_ao_Azure_DevOps')?['workItems']",
+                "select": "@string(item().id)"
+              },
+              "runAfter": {
+                "Enviar_uma_solicitacao_HTTP_ao_Azure_DevOps": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Compose_-_Tamanho_da_Querie": {
+              "type": "Compose",
+              "inputs": "@length(body('Enviar_uma_solicitacao_HTTP_ao_Azure_DevOps')?['workItems'])",
+              "runAfter": {
+                "Select_IDs_VSTS": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "BPG": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Itens_que_nao_estao_BPG": {
+          "type": "Scope",
+          "actions": {
+            "Apply_to_each_-_Itens_VSTS": {
+              "type": "Foreach",
+              "foreach": "@body('Select_IDs_VSTS')",
+              "actions": {
+                "Condition_-_Verificar_diferenca_BPG_x_VSTS": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "contains": [
+                            "@body('Select_IDs_BPG')",
+                            "@item()"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Append_to_array_variable": {
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "varItensFaltandoBPG",
+                        "value": "@items('Apply_to_each_-_Itens_VSTS')"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  }
+                }
+              }
+            },
+            "Compose_-_Resultado_itens_que_nao_estao_no_BPG": {
+              "type": "Compose",
+              "inputs": "@variables('varItensFaltandoBPG')",
+              "runAfter": {
+                "Apply_to_each_-_Itens_VSTS": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Condition_-_Verifica_se_totais_estao_iguais_BPG_x_VSTS": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Itens_que_nao_estao_VSTS": {
+          "type": "Scope",
+          "actions": {
+            "Apply_to_each_-_Itens_BPG": {
+              "type": "Foreach",
+              "foreach": "@body('Select_IDs_BPG')",
+              "actions": {
+                "Condition_-_Verificar_diferenca_BPG_x_VSTSs": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "not": {
+                          "contains": [
+                            "@body('Select_IDs_VSTS')",
+                            "@item()"
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Append_to_array_variable_1": {
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "varItensFaltandoVSTS",
+                        "value": "@items('Apply_to_each_-_Itens_BPG')"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  }
+                }
+              }
+            },
+            "Compose_-_Resultado_itens_que_nao_estao_no_VSTS": {
+              "type": "Compose",
+              "inputs": "@variables('varItensFaltandoVSTS')",
+              "runAfter": {
+                "Apply_to_each_-_Itens_BPG": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Itens_que_nao_estao_BPG": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Condition_-_Se_a_quantidade_de_itens_divergentes_for_igual_a_zero": {
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@length(variables('varItensFaltandoBPG'))",
+                  0
+                ]
+              },
+              {
+                "equals": [
+                  "@length(variables('varItensFaltandoVSTS'))",
+                  0
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Terminate_1": {
+              "type": "Terminate",
+              "inputs": {
+                "runStatus": "Succeeded"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          },
+          "runAfter": {
+            "Scope_-_Card_Audit": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Scope_-_Buscar_detalhes_dos_cards_divergentes": {
+          "type": "Scope",
+          "actions": {
+            "Compose_-_IDs_Combinados": {
+              "type": "Compose",
+              "inputs": "@union(variables('varItensFaltandoBPG'), variables('varItensFaltandoVSTS'))"
+            },
+            "Para_cada_item_retornado": {
+              "type": "Foreach",
+              "foreach": "@outputs('Compose_-_IDs_Combinados')",
+              "actions": {
+                "Get_work_item_details_-_Pegar_detalhes_dos_cards_divergentes": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "account": "YOUR_DEVOPS_ORG",
+                      "project": "YOUR_SOURCE_PROJECT",
+                      "typeName": "User Story",
+                      "id": "@int(items('Para_cada_item_retornado'))"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_visualstudioteamservices",
+                      "operationId": "GetWorkItemDetails",
+                      "connectionName": "shared_visualstudioteamservices"
+                    }
+                  }
+                },
+                "Select_-_Itens_da_querie_detalhes_de_todos_os_itens_divergentes": {
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@createArray(outputs('Get_work_item_details_-_Pegar_detalhes_dos_cards_divergentes')?['body'])",
+                    "select": {
+                      "ID": "@outputs('Get_work_item_details_-_Pegar_detalhes_dos_cards_divergentes')?['body/id']",
+                      "Titulo": "@outputs('Get_work_item_details_-_Pegar_detalhes_dos_cards_divergentes')?['body/fields/System_Title']",
+                      "Responsavel": "@outputs('Get_work_item_details_-_Pegar_detalhes_dos_cards_divergentes')?['body/fields/System_AssignedTo']"
+                    }
+                  },
+                  "runAfter": {
+                    "Get_work_item_details_-_Pegar_detalhes_dos_cards_divergentes": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Create_HTML_table_-_Criar_tabela_em_HTML_com_cards_divergentes": {
+                  "type": "Table",
+                  "inputs": {
+                    "from": "@body('Select_-_Itens_da_querie_detalhes_de_todos_os_itens_divergentes')",
+                    "format": "HTML"
+                  },
+                  "runAfter": {
+                    "Select_-_Itens_da_querie_detalhes_de_todos_os_itens_divergentes": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Compose_-_Compor_tabela": {
+                  "type": "Compose",
+                  "inputs": "<style>\n  table {\n    border: 1px solid #1C6EA4;\n    background-color: #EEEEEE;\n    width: 100%;\n    text-align: center;\n    border-collapse: collapse;\n  }\n  table td, table th {\n    border: 1px solid #AAAAAA;\n    padding: 3px 10px;\n    white-space: nowrap;\n  }\n  table tbody td {\n    font-size: 13px;\n  }\n  table thead {\n    background: #1C6EA4;\n    border-bottom: 2px solid #444444;\n  }\n  table thead th {\n    font-size: 15px;\n    font-weight: bold;\n    color: #000000;\n    border-left: 2px solid #D0E4F5;\n  }\n  table thead th:first-child {\n    border-left: none;\n  }\n</style>\n@{body('Create_HTML_table_-_Criar_tabela_em_HTML_com_cards_divergentes')}",
+                  "runAfter": {
+                    "Create_HTML_table_-_Criar_tabela_em_HTML_com_cards_divergentes": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Matriz_do_filtro_-_Buscar_gestor_do_responsavel": {
+                  "type": "Query",
+                  "inputs": {
+                    "from": "@body('Selecionar_-_Seleciona_email_CC_BU_e_email_do_gestor')",
+                    "where": "@equals(item()?['email'],outputs('Get_work_item_details_-_Pegar_detalhes_dos_cards_divergentes')?['body/fields/Vsts_AssignedToEmail'])"
+                  },
+                  "runAfter": {
+                    "Compose_-_Compor_tabela": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Compor_-_Manager_email": {
+                  "type": "Compose",
+                  "inputs": "@first(actions('Matriz_do_filtro_-_Buscar_gestor_do_responsavel')?['outputs']?['body'])?['managerEmail']",
+                  "runAfter": {
+                    "Matriz_do_filtro_-_Buscar_gestor_do_responsavel": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Acrescentar_a_variavel_de_matriz": {
+                  "type": "AppendToArrayVariable",
+                  "inputs": {
+                    "name": "varItensDetalhados",
+                    "value": {
+                      "managerEmail": "@{outputs('Compor_-_Manager_email')}",
+                      "resultCenterName": "@{first(actions('Matriz_do_filtro_-_Buscar_gestor_do_responsavel')?['outputs']?['body'])?['resultCenterName']}",
+                      "cardId": "@{outputs('Get_work_item_details_-_Pegar_detalhes_dos_cards_divergentes')?['body/id']}",
+                      "titulo": "@{outputs('Get_work_item_details_-_Pegar_detalhes_dos_cards_divergentes')?['body/fields/System_Title']}",
+                      "responsavel": "@{outputs('Get_work_item_details_-_Pegar_detalhes_dos_cards_divergentes')?['body/fields/System_AssignedTo']}",
+                      "htmlTabela": "@{outputs('Compose_-_Compor_tabela')}"
+                    }
+                  },
+                  "runAfter": {
+                    "Compor_-_Manager_email": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "Compose_-_IDs_Combinados": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 1
+                }
+              }
+            },
+            "Aplicar_a_cada_-_Manager_unico": {
+              "type": "Foreach",
+              "foreach": "@variables('varManagersUnicos')",
+              "actions": {
+                "Matriz_do_filtro_-_Cards_do_Manager_unico": {
+                  "type": "Query",
+                  "inputs": {
+                    "from": "@variables('varItensDetalhados')",
+                    "where": "@equals(item()['managerEmail'], items('Aplicar_a_cada_-_Manager_unico'))"
+                  }
+                },
+                "Selecionar_-_Campos_para_tabela_NC": {
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@body('Matriz_do_filtro_-_Cards_do_Manager_unico')",
+                    "select": {
+                      "ID": "@item()['cardId']",
+                      "Titulo": "@item()['titulo']",
+                      "Responsavel": "@item()['responsavel']"
+                    }
+                  },
+                  "runAfter": {
+                    "Matriz_do_filtro_-_Cards_do_Manager_unico": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Criar_Tabela_HTML_-_Cards_do_manager": {
+                  "type": "Table",
+                  "inputs": {
+                    "from": "@body('Selecionar_-_Campos_para_tabela_NC')",
+                    "format": "HTML"
+                  },
+                  "runAfter": {
+                    "Selecionar_-_Campos_para_tabela_NC": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Enviar_uma_solicitacao_HTTP_-_Verificar_NC_existente": {
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "parameters": {
+                      "account": "YOUR_DEVOPS_ORG",
+                      "parameters/Method": "POST",
+                      "parameters/Uri": "https://dev.azure.com/YOUR_DEVOPS_ORG/YOUR_MANAGEMENT_PROJECT/_apis/wit/wiql?api-version=7.1",
+                      "parameters/Body": "{\"query\": \"SELECT [System.Id] FROM workitems WHERE [System.TeamProject] = 'YOUR_MANAGEMENT_PROJECT' AND [System.WorkItemType] = 'Non compliance' AND [System.State] NOT IN ('Closed','Removed') AND [System.AssignedTo] = '@{items('Aplicar_a_cada_-_Manager_unico')}' AND [System.Parent] = @{variables('varAuditCardId')} AND ([System.Title] = 'YOUR_NC_TITLE_V1' OR [System.Title] = 'YOUR_NC_TITLE_V2')\"}"
+                    },
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_visualstudioteamservices",
+                      "operationId": "HttpRequest",
+                      "connectionName": "shared_visualstudioteamservices"
+                    }
+                  },
+                  "runAfter": {
+                    "Criar_Tabela_HTML_-_Cards_do_manager": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Compor_-_NC_Count": {
+                  "type": "Compose",
+                  "inputs": "@length(body('Enviar_uma_solicitacao_HTTP_-_Verificar_NC_existente')?['workItems'])",
+                  "runAfter": {
+                    "Enviar_uma_solicitacao_HTTP_-_Verificar_NC_existente": [
+                      "Succeeded"
+                    ]
+                  }
+                },
+                "Condicao_-_Se_NC_ja_existe": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@outputs('Compor_-_NC_Count')",
+                          0
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Criar_um_item_de_trabalho_NC": {
+                      "type": "OpenApiConnection",
+                      "inputs": {
+                        "parameters": {
+                          "account": "YOUR_DEVOPS_ORG",
+                          "project": "YOUR_MANAGEMENT_PROJECT",
+                          "type": "Non compliance",
+                          "workItem/title": "YOUR_NC_TITLE_V2",
+                          "workItem/description": "<p class=\"editor-paragraph\">@{body('Criar_Tabela_HTML_-_Cards_do_manager')}</p>",
+                          "workItem/area": "YOUR_MANAGEMENT_PROJECT\\YOUR_AREA_PATH\\@{if(or(equals(first(body('Matriz_do_filtro_-_Cards_do_Manager_unico'))['resultCenterName'],'YOUR_RESULT_CENTER_1'),or(equals(first(body('Matriz_do_filtro_-_Cards_do_Manager_unico'))['resultCenterName'],'YOUR_RESULT_CENTER_2'),equals(first(body('Matriz_do_filtro_-_Cards_do_Manager_unico'))['resultCenterName'],'YOUR_RESULT_CENTER_3'))),first(body('Matriz_do_filtro_-_Cards_do_Manager_unico'))['resultCenterName'],'')}",
+                          "workItem/linkUrl": "https://dev.azure.com/YOUR_DEVOPS_ORG/YOUR_MANAGEMENT_PROJECT/_workitems/edit/@{variables('varAuditCardId')}",
+                          "workItem/linkType": "Hierarchy-reverse",
+                          "workItem/dynamicFields/System.AssignedTo": "@items('Aplicar_a_cada_-_Manager_unico')"
+                        },
+                        "host": {
+                          "apiId": "/providers/Microsoft.PowerApps/apis/shared_visualstudioteamservices",
+                          "operationId": "CreateWorkItem",
+                          "connectionName": "shared_visualstudioteamservices"
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {
+                      "Atualizar_NC_existente": {
+                        "type": "OpenApiConnection",
+                        "inputs": {
+                          "parameters": {
+                            "account": "YOUR_DEVOPS_ORG",
+                            "parameters/Method": "PATCH",
+                            "parameters/Uri": "https://dev.azure.com/YOUR_DEVOPS_ORG/YOUR_MANAGEMENT_PROJECT/_apis/wit/workitems/@{body('Enviar_uma_solicitacao_HTTP_-_Verificar_NC_existente')?['workItems'][0]['id']}?api-version=7.1",
+                            "parameters/Headers": {
+                              "Content-Type": "application/json-patch+json"
+                            },
+                            "parameters/Body": "[{\"op\": \"replace\",\"path\": \"/fields/System.Description\",\"value\": \"<p>Conforme definido pela unidade, a quantidade de entregas do sistema origem deve ser igual ao BPG.<br><br>As entregas abaixo se encontram divergentes do esperado.<br><br>@{body('Criar_Tabela_HTML_-_Cards_do_manager')}</p>\"}]"
+                          },
+                          "host": {
+                            "apiId": "/providers/Microsoft.PowerApps/apis/shared_visualstudioteamservices",
+                            "operationId": "HttpRequest",
+                            "connectionName": "shared_visualstudioteamservices"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "Compor_-_NC_Count": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "runAfter": {
+                "Aplicar_a_cada_-_Popular_managers_unicos": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 1
+                }
+              }
+            },
+            "Aplicar_a_cada_-_Popular_managers_unicos": {
+              "type": "Foreach",
+              "foreach": "@variables('varItensDetalhados')",
+              "actions": {
+                "Condicao_1": {
+                  "type": "If",
+                  "expression": {
+                    "and": [
+                      {
+                        "equals": [
+                          "@contains(variables('varManagersUnicos'), item()['managerEmail'])",
+                          false
+                        ]
+                      }
+                    ]
+                  },
+                  "actions": {
+                    "Acrescentar_a_variavel_de_matriz_1": {
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "varManagersUnicos",
+                        "value": "@item()['managerEmail']"
+                      }
+                    }
+                  },
+                  "else": {
+                    "actions": {}
+                  }
+                }
+              },
+              "runAfter": {
+                "Para_cada_item_retornado": [
+                  "Succeeded"
+                ]
+              },
+              "runtimeConfiguration": {
+                "concurrency": {
+                  "repetitions": 1
+                }
+              }
+            }
+          },
+          "runAfter": {
+            "Escopo_-_Lista_de_lideres_para_NC": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Compose_-_Competencia_Titulo": {
+          "type": "Compose",
+          "inputs": "@concat('Auditoria BPG - YOUR_PROJECT_NAME - ', outputs('Compose_-_Competencia_Atual'))",
+          "runAfter": {
+            "Compose_-_Competencia_Atual": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Initialize_variable_-_varItensDetalhados": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varItensDetalhados",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Compose_-_Competencia_Titulo": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Scope_-_Card_Audit": {
+          "type": "Scope",
+          "actions": {
+            "Send_an_HTTP_request_to_Azure_DevOps_-_Buscar_card_Audit": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "account": "YOUR_DEVOPS_ORG",
+                  "parameters/Method": "POST",
+                  "parameters/Uri": "https://dev.azure.com/YOUR_DEVOPS_ORG/YOUR_MANAGEMENT_PROJECT/_apis/wit/wiql?api-version=7.1",
+                  "parameters/Body": "{\"query\": \"SELECT [System.Id] FROM workitems WHERE [System.TeamProject] = 'YOUR_MANAGEMENT_PROJECT' AND [System.WorkItemType] = 'Audit' AND [System.State] NOT IN ('Closed','Removed') AND [System.Title] CONTAINS 'Auditoria BPG' AND [System.Title] CONTAINS 'YOUR_PROJECT_NAME' AND [System.Title] CONTAINS '@{outputs('Compor_-_Mes_portugues')}'\"}"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_visualstudioteamservices",
+                  "operationId": "HttpRequest",
+                  "connectionName": "shared_visualstudioteamservices"
+                },
+                "retryPolicy": {
+                  "type": "none"
+                }
+              }
+            },
+            "Compose_-_Audit_Count": {
+              "type": "Compose",
+              "inputs": "@length(body('Send_an_HTTP_request_to_Azure_DevOps_-_Buscar_card_Audit')?['workItems'])",
+              "runAfter": {
+                "Send_an_HTTP_request_to_Azure_DevOps_-_Buscar_card_Audit": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Condition_-_Condicao_se_ja_existe_card_Audit": {
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@outputs('Compose_-_Audit_Count')",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Compose_-_card_de_auditoria_existente": {
+                  "type": "Compose",
+                  "inputs": "@body('Send_an_HTTP_request_to_Azure_DevOps_-_Buscar_card_Audit')?['workItems'][0]['id']"
+                },
+                "Definir_variavel": {
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "varAuditCardId",
+                    "value": "@outputs('Compose_-_card_de_auditoria_existente')"
+                  },
+                  "runAfter": {
+                    "Compose_-_card_de_auditoria_existente": [
+                      "Succeeded"
+                    ]
+                  }
+                }
+              },
+              "else": {
+                "actions": {
+                  "Create_a_work_item_-_Criar_card_da_auditoria": {
+                    "type": "OpenApiConnection",
+                    "inputs": {
+                      "parameters": {
+                        "account": "YOUR_DEVOPS_ORG",
+                        "project": "YOUR_MANAGEMENT_PROJECT",
+                        "type": "Audit",
+                        "workItem/title": "@outputs('Compose_-_Competencia_Titulo')",
+                        "workItem/description": "<p class=\"editor-paragraph\">Auditoria BPG @{outputs('Compose_-_Competencia_Atual')}<br><br>Escopo:<br><br>Custo<br>Prazo<br>Avaliacao<br>Esforco<br>Indicadores</p>",
+                        "workItem/iteration": "YOUR_MANAGEMENT_PROJECT",
+                        "workItem/area": "YOUR_MANAGEMENT_PROJECT\\YOUR_AREA_PATH",
+                        "workItem/userEnteredFields": {
+                          "YOUR_BU_FIELD": "YOUR_BUSINESS_UNIT_VALUE",
+                          "Type": "BPG - YOUR_TEAM_TYPE"
+                        }
+                      },
+                      "host": {
+                        "apiId": "/providers/Microsoft.PowerApps/apis/shared_visualstudioteamservices",
+                        "operationId": "CreateWorkItem",
+                        "connectionName": "shared_visualstudioteamservices"
+                      }
+                    }
+                  },
+                  "Compor_-_Card_de_auditoria_criado": {
+                    "type": "Compose",
+                    "inputs": "@outputs('Create_a_work_item_-_Criar_card_da_auditoria')?['body/id']",
+                    "runAfter": {
+                      "Create_a_work_item_-_Criar_card_da_auditoria": [
+                        "Succeeded"
+                      ]
+                    }
+                  },
+                  "Definir_variavel_1": {
+                    "type": "SetVariable",
+                    "inputs": {
+                      "name": "varAuditCardId",
+                      "value": "@outputs('Compor_-_Card_de_auditoria_criado')"
+                    },
+                    "runAfter": {
+                      "Compor_-_Card_de_auditoria_criado": [
+                        "Succeeded"
+                      ]
+                    }
+                  }
+                }
+              },
+              "runAfter": {
+                "Compose_-_Audit_Count": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Itens_que_nao_estao_VSTS": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Terminate": {
+          "type": "Terminate",
+          "inputs": {
+            "runStatus": "Succeeded"
+          },
+          "runAfter": {
+            "Scope_-_Buscar_detalhes_dos_cards_divergentes": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Compose_-_Competencia_Atual": {
+          "type": "Compose",
+          "inputs": "@toUpper(concat(substring(formatDateTime(addToTime(utcNow(),-1,'Month'),'MMM'),0,3),'_',substring(formatDateTime(addToTime(utcNow(),-1,'Month'),'yy'),0,2)))",
+          "runAfter": {}
+        },
+        "Escopo_-_Lista_de_lideres_para_NC": {
+          "type": "Scope",
+          "actions": {
+            "Enviar_uma_solicitacao_HTTP_ao_SharePoint": {
+              "type": "OpenApiConnection",
+              "inputs": {
+                "parameters": {
+                  "dataset": "https://YOUR_TENANT.sharepoint.com/sites/YOUR_SHAREPOINT_SITE",
+                  "parameters/method": "GET",
+                  "parameters/uri": "_api/web/lists/getbytitle('YOUR_RESULT_CENTER_LIST')/items?$select=ID,JSON&$top=1"
+                },
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "operationId": "HttpRequest",
+                  "connectionName": "shared_sharepointonline"
+                }
+              }
+            },
+            "Compor": {
+              "type": "Compose",
+              "inputs": "@body('Enviar_uma_solicitacao_HTTP_ao_SharePoint')?['d']?['results'][0]?['JSON']",
+              "runAfter": {
+                "Enviar_uma_solicitacao_HTTP_ao_SharePoint": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Selecionar_-_Seleciona_email_CC_BU_e_email_do_gestor": {
+              "type": "Select",
+              "inputs": {
+                "from": "@json(outputs('Compor'))",
+                "select": {
+                  "email": "@item()['email']",
+                  "resultCenterName": "@item()['resultCenterName']",
+                  "businessUnitName": "@item()['businessUnitName']",
+                  "managerEmail": "@item()['managerEmail']"
+                }
+              },
+              "runAfter": {
+                "Compor": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Condition_-_Se_a_quantidade_de_itens_divergentes_for_igual_a_zero": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Inicializar_variavel_-_varAuditCardId": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varAuditCardId",
+                "type": "integer"
+              }
+            ]
+          },
+          "runAfter": {
+            "Inicializar_variavel_-_varManagersUnicos": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Escopo_-_calculo_de_mes_dinamico": {
+          "type": "Scope",
+          "actions": {
+            "Compor_-_Mes_portugues": {
+              "type": "Compose",
+              "inputs": "@if(equals(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM'),'01'),'janeiro',if(equals(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM'),'02'),'fevereiro',if(equals(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM'),'03'),'marco',if(equals(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM'),'04'),'abril',if(equals(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM'),'05'),'maio',if(equals(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM'),'06'),'junho',if(equals(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM'),'07'),'julho',if(equals(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM'),'08'),'agosto',if(equals(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM'),'09'),'setembro',if(equals(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM'),'10'),'outubro',if(equals(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM'),'11'),'novembro','dezembro')))))))))))"
+            },
+            "Compor_-_Trimestre": {
+              "type": "Compose",
+              "inputs": "@concat('Trim ', if(lessOrEquals(int(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM')),3),'1',if(lessOrEquals(int(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM')),6),'2',if(lessOrEquals(int(formatDateTime(addToTime(utcNow(),-1,'Month'),'MM')),9),'3','4'))))",
+              "runAfter": {
+                "Compor_-_Mes_portugues": [
+                  "Succeeded"
+                ]
+              }
+            },
+            "Compor_Ano": {
+              "type": "Compose",
+              "inputs": "@int(formatDateTime(addToTime(utcNow(),-1,'Month'),'yyyy'))",
+              "runAfter": {
+                "Compor_-_Trimestre": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "runAfter": {
+            "Initialize_variable_-_Itens_Faltando_VSTS": [
+              "Succeeded"
+            ]
+          }
+        },
+        "Inicializar_variavel_-_varManagersUnicos": {
+          "type": "InitializeVariable",
+          "inputs": {
+            "variables": [
+              {
+                "name": "varManagersUnicos",
+                "type": "array"
+              }
+            ]
+          },
+          "runAfter": {
+            "Initialize_variable_-_varItensDetalhados": [
+              "Succeeded"
+            ]
+          }
+        }
+      }
+    },
+    "displayName": "[YOUR_PROJECT_NAME] - Se a quantidade de entregas do sistema origem é igual ao BPG",
+    "environment": {
+      "name": "YOUR_ENVIRONMENT_ID"
+    },
+    "workflowEntityId": "YOUR_WORKFLOW_ENTITY_ID"
+  },
+  "name": "YOUR_WORKFLOW_ENTITY_ID"
+}
